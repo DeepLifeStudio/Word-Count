@@ -22,11 +22,12 @@ jobs:
 
     - name: 安装依赖
       run: |
-        pip install flask python-docx pyinstaller
+        pip install -r requirements.txt
+        pip install pyinstaller
 
     - name: 打包应用
       run: |
-        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates;templates" --add-data "static;static" --hidden-import=flask --hidden-import=docx word_count_web.py
+        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates;templates" --add-data "static;static" --hidden-import=fastapi --hidden-import=uvicorn --hidden-import=docx --hidden-import=PyPDF2 --hidden-import=openpyxl --hidden-import=reportlab word_count_fastapi.py
 
     - name: 上传构建产物
       uses: actions/upload-artifact@v4
@@ -49,11 +50,12 @@ jobs:
 
     - name: 安装依赖
       run: |
-        pip install flask python-docx pyinstaller
+        pip install -r requirements.txt
+        pip install pyinstaller
 
     - name: 打包应用
       run: |
-        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates:templates" --add-data "static:static" --hidden-import=flask --hidden-import=docx word_count_web.py
+        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates:templates" --add-data "static:static" --hidden-import=fastapi --hidden-import=uvicorn --hidden-import=docx --hidden-import=PyPDF2 --hidden-import=openpyxl --hidden-import=reportlab word_count_fastapi.py
 
     - name: 压缩应用
       run: |
