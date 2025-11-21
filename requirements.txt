@@ -1,2 +1,12 @@
+# === 原有 Flask 依赖(保留用于归档文件 word_count_web_flask_backup.py) ===
 flask
 python-docx
+PyPDF2
+openpyxl
+reportlab
+
+# === 新增 FastAPI 依赖(用于 word_count_fastapi.py) ===
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2

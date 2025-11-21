@@ -4,84 +4,265 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Word Count Pro</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#007AFF',
+                        'primary-hover': '#0062CC',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-    <div class="glass-card">
-        <header>
-            <div class="logo-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <h1>Word Count Pro</h1>
-            <p class="subtitle">优雅高效的文档统计工具</p>
-        </header>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex items-center justify-center p-4 antialiased bg-fixed" style="background-image: radial-gradient(at 100% 0%, rgba(200, 220, 255, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(230, 230, 235, 0.4) 0px, transparent 50%);">
 
-        <main>
-            <div class="input-section">
-                <div id="dropZone" class="drop-zone">
-                    <div class="drop-content">
-                        <div class="drop-icon">
+    {% raw %}
+    <div id="app" class="w-full max-w-4xl" v-cloak>
+        <div class="glass-card bg-white/65 backdrop-blur-xl rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.5)_inset] p-8 md:p-12 transition-all duration-300">
+
+            <!-- Header -->
+            <header class="mb-10 text-center">
+                <div class="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight mb-2 text-gray-900">Word Count Pro</h1>
+                <p class="text-gray-500 text-lg">优雅高效的文档统计工具</p>
+            </header>
+
+            <!-- Upload Section -->
+            <div v-if="!results.length && !loading" class="mb-8">
+                <div
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleDrop"
+                    @click="triggerFileInput"
+                    :class="{'border-blue-500 bg-white/80 scale-110 shadow-2xl': isDragging, 'border-gray-200/50 bg-white/50': !isDragging}"
+                    class="border-2 border-dashed rounded-2xl p-16 transition-all duration-300 cursor-pointer hover:border-blue-400 hover:bg-white/70 group relative overflow-hidden"
+                >
+                    <div class="flex flex-col items-center gap-4 relative z-10">
+                        <div class="text-blue-500 opacity-80 group-hover:scale-110 transition-transform duration-300">
                             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M22 19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V5C2 4.46957 2.21071 3.96086 2.58579 3.58579C2.96086 3.21071 3.46957 3 4 3H9L11 7H20C20.5304 7 21.0391 7.21071 21.4142 7.58579C21.7893 7.96086 22 8.46957 22 9V19Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M12 11V17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M9 14L12 11L15 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </div>
-                        <h3>点击或拖拽上传</h3>
-                        <p class="hint-text">支持 Word 文档或文件夹</p>
-
-                        <input type="file" id="folderInputBtn" webkitdirectory directory multiple hidden>
+                        <h3 class="text-xl font-semibold text-gray-800">点击或拖拽上传</h3>
+                        <p class="text-gray-500">支持 Word / PDF / TXT / Markdown 文档</p>
                     </div>
-                    <div id="uploadSpinner" class="spinner hidden"></div>
                 </div>
-            </div>
-
-            <div id="errorMsg" class="error-message hidden">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span id="errorText"></span>
-            </div>
-
-            <div id="resultSection" class="result-section hidden">
-                <div class="result-header">
-                    <h2>统计结果</h2>
-                    <button id="exportBtn" class="secondary-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        导出 CSV
+                <div class="text-center mt-4">
+                    <button @click="triggerFolderInput" class="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
+                        或者点击这里上传文件夹
                     </button>
                 </div>
 
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>文件名</th>
-                                <th>字数 (不计空格)</th>
-                                <th>状态</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultTableBody">
-                            <!-- Data injected here -->
-                        </tbody>
-                    </table>
+                <input type="file" ref="fileInput" multiple hidden @change="handleFileSelect">
+                <input type="file" ref="folderInput" webkitdirectory multiple hidden @change="handleFileSelect">
+            </div>
+
+            <!-- Loading State -->
+            <div v-if="loading" class="py-20 flex flex-col items-center justify-center">
+                <div class="w-12 h-12 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+
+                <!-- Preprocessing Progress -->
+                <p v-if="uploadProgress.preprocessing" class="text-gray-500 font-medium mb-4">
+                    正在筛选文件...
+                </p>
+                <p v-else class="text-gray-500 font-medium mb-4">正在分析文档...</p>
+
+                <!-- Preprocessing Info -->
+                <div v-if="uploadProgress.preprocessing" class="w-full max-w-md space-y-3">
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>筛选进度: {{ uploadProgress.preprocessingCurrent }} / {{ uploadProgress.preprocessingTotal }}</span>
+                        <span>{{ Math.round((uploadProgress.preprocessingCurrent / uploadProgress.preprocessingTotal) * 100) }}%</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div
+                            class="bg-gradient-to-r from-purple-500 to-pink-400 h-2.5 rounded-full transition-all duration-300"
+                            :style="{ width: (uploadProgress.preprocessingCurrent / uploadProgress.preprocessingTotal * 100) + '%' }"
+                        ></div>
+                    </div>
+                </div>
+
+                <!-- Upload Progress Info (显示批次上传进度) -->
+                <div v-if="!uploadProgress.preprocessing && uploadProgress.total > 1" class="w-full max-w-md space-y-3">
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>批次进度: {{ uploadProgress.current }} / {{ uploadProgress.total }}</span>
+                        <span>{{ Math.round((uploadProgress.current / uploadProgress.total) * 100) }}%</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>文件进度: {{ uploadProgress.currentFiles }} / {{ uploadProgress.totalFiles }}</span>
+                        <span>{{ Math.round((uploadProgress.currentFiles / uploadProgress.totalFiles) * 100) }}%</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div
+                            class="bg-gradient-to-r from-blue-500 to-cyan-400 h-2.5 rounded-full transition-all duration-300"
+                            :style="{ width: (uploadProgress.currentFiles / uploadProgress.totalFiles * 100) + '%' }"
+                        ></div>
+                    </div>
                 </div>
             </div>
-        </main>
+
+            <!-- Error Message -->
+            <div v-if="error" class="mb-6 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 border border-red-100 animate-fade-in">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span v-text="error"></span>
+                <button @click="error = null" class="ml-auto hover:bg-red-100 p-1 rounded-full">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div v-if="results.length && !loading" class="animate-slide-up">
+                <!-- Controls Bar -->
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <!-- Filter Tabs -->
+                    <div class="bg-gray-100/80 p-1 rounded-xl flex gap-1 overflow-x-auto max-w-full">
+                        <button
+                            v-for="type in filterTypes"
+                            :key="type.value"
+                            @click="currentFilter = type.value"
+                            :class="{'bg-white shadow-sm text-gray-900': currentFilter === type.value, 'text-gray-500 hover:text-gray-700': currentFilter !== type.value}"
+                            class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap"
+                        >
+                            {{ type.label }}
+                        </button>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3">
+                        <button @click="reset" class="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-all shadow-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+                                <line x1="16" y1="5" x2="22" y2="5"></line>
+                                <line x1="19" y1="2" x2="19" y2="8"></line>
+                            </svg>
+                            重新上传
+                        </button>
+                        <button @click="exportExcel" class="flex items-center gap-2 px-4 py-2 bg-white border border-green-200 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 transition-all shadow-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="8" y1="13" x2="16" y2="13"></line>
+                                <line x1="8" y1="17" x2="16" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            导出 Excel
+                        </button>
+                        <button @click="exportPDF" class="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-all shadow-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            导出 PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white/50 p-4 rounded-2xl border border-white/60 shadow-sm">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">总文件数</p>
+                        <p class="text-2xl font-bold text-gray-800">{{ filteredResults.length }}</p>
+                    </div>
+                    <div class="bg-white/50 p-4 rounded-2xl border border-white/60 shadow-sm">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">总字数</p>
+                        <p class="text-2xl font-bold text-gray-800">{{ totalWords.toLocaleString() }}</p>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <div class="bg-white/40 rounded-2xl border border-white/60 overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-200/50">
+                                    <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">文件名</th>
+                                    <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">类型</th>
+                                    <th @click="toggleSort" class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors group select-none">
+                                        <div class="flex items-center gap-1">
+                                            字数
+                                            <div class="flex flex-col gap-0.5 text-gray-400">
+                                                <!-- Default state -->
+                                                <svg v-if="!sortOrder" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-50 group-hover:opacity-100 transition-opacity">
+                                                    <path d="M7 15l5 5 5-5"></path>
+                                                    <path d="M7 9l5-5 5 5"></path>
+                                                </svg>
+                                                <!-- Descending (High to Low) -->
+                                                <svg v-else-if="sortOrder === 'desc'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                                    <path d="M7 9l5-5 5 5"></path>
+                                                    <path d="M12 4v16"></path>
+                                                </svg>
+                                                <!-- Ascending (Low to High) -->
+                                                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                                    <path d="M7 15l5 5 5-5"></path>
+                                                    <path d="M12 4v16"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </th>
+                                    <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100/50">
+                                <tr v-for="file in filteredResults" :key="file.filename" class="hover:bg-white/40 transition-colors">
+                                    <td class="p-4 text-sm font-medium text-gray-800">{{ file.filename }}</td>
+                                    <td class="p-4">
+                                        <span :class="getFileTypeClass(file.file_type)" class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide">
+                                            {{ file.file_type.replace('.', '') }}
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-sm text-gray-600 font-mono">{{ file.char_count.toLocaleString() }}</td>
+                                    <td class="p-4">
+                                        <span :class="file.status === '成功' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2.5 py-1 rounded-lg text-xs font-medium">
+                                            {{ file.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredResults.length === 0">
+                                    <td colspan="4" class="p-8 text-center text-gray-400 text-sm">
+                                        没有找到符合条件的文件
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% endraw %}
+
+    <script src="/static/script.js"></script>
 </body>
 </html>
