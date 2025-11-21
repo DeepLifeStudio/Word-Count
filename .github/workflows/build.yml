@@ -29,7 +29,7 @@ jobs:
         pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates;templates" --add-data "static;static" --hidden-import=flask --hidden-import=docx word_count_web.py
 
     - name: 上传构建产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Word字数统计-Windows
         path: dist/Word字数统计.exe
@@ -61,7 +61,7 @@ jobs:
         zip -r Word字数统计-macOS.zip Word字数统计.app
 
     - name: 上传构建产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Word字数统计-macOS
         path: dist/Word字数统计-macOS.zip
@@ -74,13 +74,13 @@ jobs:
 
     steps:
     - name: 下载 Windows 构建产物
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: Word字数统计-Windows
         path: ./artifacts/windows
 
     - name: 下载 macOS 构建产物
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: Word字数统计-macOS
         path: ./artifacts/macos
