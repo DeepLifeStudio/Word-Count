@@ -1,0 +1,110 @@
+name: 打包应用
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: 构建 Windows 应用
+    runs-on: windows-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 安装依赖
+      run: |
+        pip install flask python-docx pyinstaller
+
+    - name: 打包应用
+      run: |
+        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates;templates" --add-data "static;static" --hidden-import=flask --hidden-import=docx word_count_web.py
+
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v3
+      with:
+        name: Word字数统计-Windows
+        path: dist/Word字数统计.exe
+
+  build-macos:
+    name: 构建 macOS 应用
+    runs-on: macos-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 安装依赖
+      run: |
+        pip install flask python-docx pyinstaller
+
+    - name: 打包应用
+      run: |
+        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates:templates" --add-data "static:static" --hidden-import=flask --hidden-import=docx word_count_web.py
+
+    - name: 压缩应用
+      run: |
+        cd dist
+        zip -r Word字数统计-macOS.zip Word字数统计.app
+
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v3
+      with:
+        name: Word字数统计-macOS
+        path: dist/Word字数统计-macOS.zip
+
+  create-release:
+    name: 创建发布
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: 下载 Windows 构建产物
+      uses: actions/download-artifact@v3
+      with:
+        name: Word字数统计-Windows
+        path: ./artifacts/windows
+
+    - name: 下载 macOS 构建产物
+      uses: actions/download-artifact@v3
+      with:
+        name: Word字数统计-macOS
+        path: ./artifacts/macos
+
+    - name: 创建 Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ./artifacts/windows/Word字数统计.exe
+          ./artifacts/macos/Word字数统计-macOS.zip
+        body: |
+          ## Word 字数统计工具
+
+          ### 下载说明
+          - **Windows 用户**: 下载 `Word字数统计.exe`，双击即可使用
+          - **Mac 用户**: 下载 `Word字数统计-macOS.zip`，解压后双击 `.app` 文件
+
+          ### 首次使用提示
+          - Windows: 可能提示"Windows 已保护你的电脑"，点击"更多信息" → "仍要运行"
+          - macOS: 右键点击应用 → 选择"打开"
+
+          ### 功能特点
+          - 批量统计 Word 文档字数
+          - 支持拖拽上传
+          - 可导出 CSV 结果
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

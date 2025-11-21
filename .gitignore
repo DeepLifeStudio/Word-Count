@@ -1,0 +1,9 @@
+*.pyc
+__pycache__/
+*.spec
+build/
+dist/
+*.egg-info/
+.DS_Store
+*.log
+字数统计结果.csv
