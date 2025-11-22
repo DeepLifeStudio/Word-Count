@@ -22,10 +22,10 @@ if errorlevel 1 (
 REM 检查依赖
 echo.
 echo 📦 检查依赖库...
-python -c "import flask" 2>nul
+python -c "import fastapi" 2>nul
 if errorlevel 1 (
-    echo 正在安装 Flask...
-    pip install flask
+    echo 正在安装 FastAPI...
+    pip install fastapi uvicorn
 )
 
 python -c "import docx" 2>nul
@@ -59,9 +59,13 @@ pyinstaller ^
     --onefile ^
     --add-data "templates;templates" ^
     --add-data "static;static" ^
-    --hidden-import=flask ^
+    --hidden-import=fastapi ^
+    --hidden-import=uvicorn ^
     --hidden-import=docx ^
-    word_count_web.py
+    --hidden-import=PyPDF2 ^
+    --hidden-import=openpyxl ^
+    --hidden-import=reportlab ^
+    word_count_fastapi.py
 
 REM 检查打包结果
 if exist "dist\Word字数统计.exe" (

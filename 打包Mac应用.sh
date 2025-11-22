@@ -37,9 +37,13 @@ pyinstaller \
     --onefile \
     --add-data "templates:templates" \
     --add-data "static:static" \
-    --hidden-import=flask \
+    --hidden-import=fastapi \
+    --hidden-import=uvicorn \
     --hidden-import=docx \
-    word_count_web.py
+    --hidden-import=PyPDF2 \
+    --hidden-import=openpyxl \
+    --hidden-import=reportlab \
+    word_count_fastapi.py
 
 # 检查打包结果
 if [ -f "dist/Word字数统计.app/Contents/MacOS/Word字数统计" ]; then

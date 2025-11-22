@@ -1,4 +1,5 @@
 import os
+import sys
 import io
 import tempfile
 import shutil
@@ -20,6 +21,20 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 # ============================================================================
+# PyInstaller 资源路径处理
+# ============================================================================
+def get_resource_path(relative_path):
+    """
+    获取资源文件的绝对路径，兼容开发环境和 PyInstaller 打包后的环境
+    PyInstaller 会将资源文件解压到 sys._MEIPASS 临时目录
+    """
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller 打包后的临时路径
+        return os.path.join(sys._MEIPASS, relative_path)
+    # 开发环境的相对路径
+    return os.path.join(os.path.abspath("."), relative_path)
+
+# ============================================================================
 # FastAPI 应用实例
 # ============================================================================
 app = FastAPI(
@@ -33,9 +48,12 @@ app = FastAPI(
 # 设置最大请求体大小为 100MB
 app.max_file_size = 100 * 1024 * 1024
 
-# 挂载静态文件和模板
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# 挂载静态文件和模板 - 使用资源路径处理函数
+static_path = get_resource_path("static")
+templates_path = get_resource_path("templates")
+
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+templates = Jinja2Templates(directory=templates_path)
 
 # ============================================================================
 # Pydantic 数据模型
