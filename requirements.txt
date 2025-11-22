@@ -10,3 +10,9 @@ fastapi
 uvicorn[standard]
 python-multipart
 jinja2
+
+# === 文档处理依赖 ===
+pdfplumber
+chardet
+beautifulsoup4
+markdown

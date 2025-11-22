@@ -1,28 +1,56 @@
 import os
 import sys
-import io
-import tempfile
-import shutil
-import docx
-from typing import List
-from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form
-from fastapi.responses import StreamingResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-import pdfplumber
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-import markdown
-from bs4 import BeautifulSoup
-import chardet
-import re
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+import logging
+from logging.handlers import RotatingFileHandler
+
+# ============================================================================
+# 日志初始化 - 必须在所有其他导入之前，以便捕获导入错误
+# ============================================================================
+log_file = os.path.join(os.path.expanduser("~"), "word_count_debug.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=3),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+logger.info("=== Application starting ===")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Log file: {log_file}")
+
+# ============================================================================
+# 导入所有依赖 - 用 try-except 捕获导入错误
+# ============================================================================
+try:
+    import io
+    import tempfile
+    import shutil
+    import docx
+    from typing import List
+    from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form
+    from fastapi.responses import StreamingResponse, HTMLResponse
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.templating import Jinja2Templates
+    from pydantic import BaseModel
+    import pdfplumber
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    import markdown
+    from bs4 import BeautifulSoup
+    import chardet
+    import re
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    logger.info("All imports successful")
+except Exception as e:
+    logger.critical(f"Import error: {e}", exc_info=True)
+    sys.exit(1)
 
 # ============================================================================
 # PyInstaller 资源路径处理
@@ -517,25 +545,8 @@ async def export_pdf(data: ExportRequest):
 # 应用启动入口
 # ============================================================================
 if __name__ == '__main__':
-    # 配置日志
-    import logging
-    from logging.handlers import RotatingFileHandler
-
-    # 获取用户主目录下的日志文件路径
-    log_file = os.path.join(os.path.expanduser("~"), "word_count_debug.log")
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=3),
-            logging.StreamHandler()
-        ]
-    )
-    logger = logging.getLogger(__name__)
-
     try:
-        logger.info("Application starting...")
+        logger.info("Starting main application...")
 
         # Open browser automatically
         import webbrowser
