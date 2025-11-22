@@ -517,22 +517,52 @@ async def export_pdf(data: ExportRequest):
 # 应用启动入口
 # ============================================================================
 if __name__ == '__main__':
-    # Open browser automatically
-    import webbrowser
-    from threading import Timer
-    import uvicorn
+    # 配置日志
+    import logging
+    from logging.handlers import RotatingFileHandler
 
-    def open_browser():
-        webbrowser.open_new("http://127.0.0.1:8000")
+    # 获取用户主目录下的日志文件路径
+    log_file = os.path.join(os.path.expanduser("~"), "word_count_debug.log")
 
-    # 延迟 1.5 秒后打开浏览器,确保服务器已启动
-    Timer(1.5, open_browser).start()
-
-    # 启动 Uvicorn ASGI 服务器
-    uvicorn.run(
-        app,
-        host="127.0.0.1",
-        port=8000,
-        log_level="info",
-        access_log=True
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=3),
+            logging.StreamHandler()
+        ]
     )
+    logger = logging.getLogger(__name__)
+
+    try:
+        logger.info("Application starting...")
+
+        # Open browser automatically
+        import webbrowser
+        from threading import Timer
+        import uvicorn
+
+        def open_browser():
+            url = "http://127.0.0.1:8000"
+            logger.info(f"Attempting to open browser at {url}")
+            try:
+                webbrowser.open_new(url)
+                logger.info("Browser open command sent")
+            except Exception as e:
+                logger.error(f"Failed to open browser: {e}")
+
+        # 延迟 1.5 秒后打开浏览器,确保服务器已启动
+        Timer(1.5, open_browser).start()
+
+        # 启动 Uvicorn ASGI 服务器
+        logger.info("Starting Uvicorn server...")
+        uvicorn.run(
+            app,
+            host="127.0.0.1",
+            port=8000,
+            log_level="info",
+            access_log=True
+        )
+    except Exception as e:
+        logger.critical(f"Fatal error: {e}", exc_info=True)
+        sys.exit(1)

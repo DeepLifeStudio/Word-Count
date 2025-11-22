@@ -30,7 +30,7 @@ jobs:
 
     - name: 打包应用
       run: |
-        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates;templates" --add-data "static;static" --hidden-import=fastapi --hidden-import=uvicorn --hidden-import=docx --hidden-import=PyPDF2 --hidden-import=openpyxl --hidden-import=reportlab word_count_fastapi.py
+        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates;templates" --add-data "static;static" --hidden-import=fastapi --hidden-import=uvicorn --hidden-import=uvicorn.logging --hidden-import=uvicorn.loops --hidden-import=uvicorn.loops.auto --hidden-import=uvicorn.protocols --hidden-import=uvicorn.protocols.http --hidden-import=uvicorn.protocols.http.auto --hidden-import=uvicorn.lifespan --hidden-import=uvicorn.lifespan.on --hidden-import=docx --hidden-import=PyPDF2 --hidden-import=openpyxl --hidden-import=reportlab word_count_fastapi.py
 
     - name: 上传构建产物
       uses: actions/upload-artifact@v4
@@ -58,7 +58,7 @@ jobs:
 
     - name: 打包应用
       run: |
-        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates:templates" --add-data "static:static" --hidden-import=fastapi --hidden-import=uvicorn --hidden-import=docx --hidden-import=PyPDF2 --hidden-import=openpyxl --hidden-import=reportlab word_count_fastapi.py
+        pyinstaller --name="Word字数统计" --windowed --onefile --add-data "templates:templates" --add-data "static:static" --hidden-import=fastapi --hidden-import=uvicorn --hidden-import=uvicorn.logging --hidden-import=uvicorn.loops --hidden-import=uvicorn.loops.auto --hidden-import=uvicorn.protocols --hidden-import=uvicorn.protocols.http --hidden-import=uvicorn.protocols.http.auto --hidden-import=uvicorn.lifespan --hidden-import=uvicorn.lifespan.on --hidden-import=docx --hidden-import=PyPDF2 --hidden-import=openpyxl --hidden-import=reportlab word_count_fastapi.py
 
     - name: 压缩应用
       run: |
