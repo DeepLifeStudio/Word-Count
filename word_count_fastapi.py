@@ -10,9 +10,13 @@ from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from PyPDF2 import PdfReader
+import pdfplumber
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+import markdown
+from bs4 import BeautifulSoup
+import chardet
+import re
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -71,62 +75,158 @@ class ExportRequest(BaseModel):
     results: List[dict]
 
 # ============================================================================
-# 核心业务逻辑函数(完全复用原 Flask 版本,未做任何修改)
+# 核心业务逻辑函数
 # ============================================================================
+def calculate_mixed_word_count(text):
+    """
+    计算混合字数:
+    1. 中文字符(CJK): 每个字符计为1
+    2. 英文/数字/其他: 以空格/标点分隔的单词计为1
+    """
+    if not text:
+        return 0
+
+    # 1. 统计中文字符 (CJK Unified Ideographs)
+    cjk_pattern = re.compile(r'[\u4e00-\u9fff]')
+    cjk_chars = cjk_pattern.findall(text)
+    cjk_count = len(cjk_chars)
+
+    # 2. 将中文字符替换为空格,然后统计剩下的英文单词
+    no_cjk_text = cjk_pattern.sub(' ', text)
+    english_words = no_cjk_text.split()
+    english_count = len(english_words)
+
+    return cjk_count + english_count
+
 def get_word_count(file_path):
     """
     读取 docx 文件并统计字数 (统计逻辑:纯文本字符数,去除空格和换行)
+    包含页眉和页脚内容
     """
     try:
         doc = docx.Document(file_path)
         full_text = []
+
+        # 1. 正文内容
         for para in doc.paragraphs:
             full_text.append(para.text)
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     full_text.append(cell.text)
-        text_content = "".join(full_text)
-        clean_text = text_content.replace(" ", "").replace("\n", "").replace("\t", "").replace("\r", "")
-        return len(clean_text), "成功"
+
+        # 2. 页眉和页脚内容
+        for section in doc.sections:
+            # 页眉
+            if section.header:
+                for para in section.header.paragraphs:
+                    full_text.append(para.text)
+                for table in section.header.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            full_text.append(cell.text)
+            # 页脚
+            if section.footer:
+                for para in section.footer.paragraphs:
+                    full_text.append(para.text)
+                for table in section.footer.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            full_text.append(cell.text)
+
+        text_content = "\n".join(full_text)
+        return calculate_mixed_word_count(text_content), "成功"
     except Exception as e:
         return 0, f"失败: {str(e)}"
 
 def get_pdf_word_count(file_path):
     """
     读取 PDF 文件并统计字数 (统计逻辑:纯文本字符数,去除空格和换行)
+    使用 pdfplumber 提高准确性
     """
     try:
-        reader = PdfReader(file_path)
         full_text = []
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                full_text.append(text)
-        text_content = "".join(full_text)
-        clean_text = text_content.replace(" ", "").replace("\n", "").replace("\t", "").replace("\r", "")
-        return len(clean_text), "成功"
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    full_text.append(text)
+
+        text_content = "\n".join(full_text)
+        return calculate_mixed_word_count(text_content), "成功"
     except Exception as e:
         return 0, f"失败: {str(e)}"
 
 def get_txt_word_count(file_path):
     """
     读取 TXT 文件并统计字数 (统计逻辑:纯文本字符数,去除空格和换行)
-    支持多种编码:UTF-8, GBK, GB2312
+    使用 chardet 自动检测编码
     """
-    encodings = ['utf-8', 'gbk', 'gb2312', 'utf-16', 'latin-1']
+    try:
+        # 1. 读取二进制内容
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
 
-    for encoding in encodings:
+        # 2. 检测编码
+        result = chardet.detect(raw_data)
+        encoding = result['encoding']
+
+        # 3. 如果检测失败或置信度低,尝试常用编码
+        if not encoding or result['confidence'] < 0.5:
+            encodings_to_try = ['utf-8', 'gbk', 'gb2312', 'utf-16', 'latin-1']
+        else:
+            encodings_to_try = [encoding, 'utf-8', 'gbk'] # 优先尝试检测到的编码
+
+        text_content = None
+        for enc in encodings_to_try:
+            try:
+                text_content = raw_data.decode(enc)
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+
+        if text_content is None:
+             return 0, "失败: 无法识别文件编码"
+
+        if text_content is None:
+             return 0, "失败: 无法识别文件编码"
+
+        return calculate_mixed_word_count(text_content), "成功"
+    except Exception as e:
+        return 0, f"失败: {str(e)}"
+
+def get_md_word_count(file_path):
+    """
+    读取 Markdown 文件并统计字数
+    逻辑: 将 Markdown 转换为 HTML, 然后提取纯文本, 去除 Markdown 语法符号
+    """
+    try:
+        # Markdown 通常是 UTF-8, 但为了保险也检测一下
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
+
+        result = chardet.detect(raw_data)
+        encoding = result['encoding'] or 'utf-8'
+
         try:
-            with open(file_path, 'r', encoding=encoding) as f:
-                text_content = f.read()
-            clean_text = text_content.replace(" ", "").replace("\n", "").replace("\t", "").replace("\r", "")
-            return len(clean_text), "成功"
-        except (UnicodeDecodeError, LookupError):
-            continue
+            md_content = raw_data.decode(encoding)
+        except:
+            md_content = raw_data.decode('utf-8', errors='ignore')
 
-    # 如果所有编码都失败
-    return 0, "失败: 无法识别文件编码"
+        # 转换为 HTML
+        html = markdown.markdown(md_content)
+
+        # 提取纯文本
+        soup = BeautifulSoup(html, 'html.parser')
+        text_content = soup.get_text()
+
+        # 提取纯文本
+        soup = BeautifulSoup(html, 'html.parser')
+        text_content = soup.get_text()
+
+        return calculate_mixed_word_count(text_content), "成功"
+    except Exception as e:
+        return 0, f"失败: {str(e)}"
 
 def get_word_count_unified(file_path):
     """
@@ -139,8 +239,10 @@ def get_word_count_unified(file_path):
         return get_word_count(file_path)
     elif file_extension == '.pdf':
         return get_pdf_word_count(file_path)
-    elif file_extension in ['.txt', '.md']:
+    elif file_extension == '.txt':
         return get_txt_word_count(file_path)
+    elif file_extension == '.md':
+        return get_md_word_count(file_path)
     else:
         return 0, f"失败: 不支持的文件格式 {file_extension}"
 
@@ -260,7 +362,7 @@ async def export_excel(data: ExportRequest):
     ws.title = "字数统计报告"
 
     # Define headers
-    headers = ["文件名", "文件类型", "字符数(不含空格)", "状态"]
+    headers = ["文件名", "文件类型", "字数(中字+英词)", "状态"]
     ws.append(headers)
 
     # Style headers

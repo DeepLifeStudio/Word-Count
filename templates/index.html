@@ -27,7 +27,7 @@
 <body class="bg-gray-50 text-gray-900 min-h-screen flex items-center justify-center p-4 antialiased bg-fixed" style="background-image: radial-gradient(at 100% 0%, rgba(200, 220, 255, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(230, 230, 235, 0.4) 0px, transparent 50%);">
 
     {% raw %}
-    <div id="app" class="w-full max-w-4xl" v-cloak>
+    <div id="app" class="w-full max-w-6xl" v-cloak>
         <div class="glass-card bg-white/65 backdrop-blur-xl rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.5)_inset] p-8 md:p-12 transition-all duration-300">
 
             <!-- Header -->
@@ -73,8 +73,6 @@
                     </button>
                 </div>
 
-                <input type="file" ref="fileInput" multiple hidden @change="handleFileSelect">
-                <input type="file" ref="folderInput" webkitdirectory multiple hidden @change="handleFileSelect">
             </div>
 
             <!-- Loading State -->
@@ -122,20 +120,111 @@
                 </div>
             </div>
 
+            <!-- Doc Warning Modal -->
+            <div v-if="docWarning" class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(4px);">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden transform transition-all scale-100" @click.stop>
+                    <!-- Header -->
+                    <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-gradient-to-r from-orange-50/50 to-transparent">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-800">
+                                发现 {{ docWarning.count }} 个不支持的文件格式
+                            </h3>
+                        </div>
+                        <button @click="closeDocWarning" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="p-8">
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <!-- File List -->
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">检测到的文件</p>
+                                <div class="bg-gray-50/50 rounded-xl p-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                    <ul class="space-y-1">
+                                        <li v-for="file in docWarning.files" :key="file" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-gray-600 text-sm group">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-gray-400 group-hover:text-orange-400 transition-colors flex-shrink-0">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                <polyline points="14 2 14 8 20 8"></polyline>
+                                            </svg>
+                                            <span class="truncate font-medium">{{ file }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Divider -->
+                            <div class="hidden md:block w-px bg-gray-100"></div>
+
+                            <!-- Solution -->
+                            <div class="flex-1">
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">解决方案</p>
+                                <div class="space-y-6">
+                                    <div class="flex gap-4">
+                                        <div class="mt-1">
+                                            <div class="w-2 h-2 rounded-full bg-orange-400 ring-4 ring-orange-50"></div>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-800 font-semibold mb-1">仅支持 .docx 格式</p>
+                                            <p class="text-sm text-gray-500 leading-relaxed">
+                                                旧版 .doc 格式采用二进制存储，无法被系统正确解析。
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
+                                        <p class="text-sm font-medium text-orange-800 mb-2">如何转换？</p>
+                                        <ol class="text-sm text-orange-700/80 space-y-1.5 list-decimal list-inside">
+                                            <li>打开原始 .doc 文件</li>
+                                            <li>点击 "文件" > "另存为"</li>
+                                            <li>选择 <strong>Word 文档 (*.docx)</strong></li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-6 py-4 bg-gray-50/50 border-t border-gray-50 flex justify-end">
+                        <button @click="closeDocWarning" class="px-5 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm">
+                            知道了
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Error Message -->
-            <div v-if="error" class="mb-6 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 border border-red-100 animate-fade-in">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <span v-text="error"></span>
-                <button @click="error = null" class="ml-auto hover:bg-red-100 p-1 rounded-full">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+            <div v-if="error" class="mb-6 p-5 bg-amber-50 text-amber-900 rounded-2xl border border-amber-200 animate-fade-in shadow-sm">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium whitespace-pre-line" v-text="error"></p>
+                    </div>
+                    <button @click="error = null" class="flex-shrink-0 hover:bg-amber-100 p-1.5 rounded-lg transition-colors">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Results Section -->
@@ -156,35 +245,51 @@
                     </div>
 
                     <!-- Actions -->
-                    <div class="flex gap-3">
-                        <button @click="reset" class="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-all shadow-sm">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
-                                <line x1="16" y1="5" x2="22" y2="5"></line>
-                                <line x1="19" y1="2" x2="19" y2="8"></line>
-                            </svg>
-                            重新上传
-                        </button>
-                        <button @click="exportExcel" class="flex items-center gap-2 px-4 py-2 bg-white border border-green-200 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 transition-all shadow-sm">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="8" y1="13" x2="16" y2="13"></line>
-                                <line x1="8" y1="17" x2="16" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            导出 Excel
-                        </button>
-                        <button @click="exportPDF" class="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-all shadow-sm">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            导出 PDF
-                        </button>
+                    <div class="flex flex-col sm:flex-row gap-3 items-center">
+                        <!-- Upload Controls -->
+                        <div class="flex items-center gap-2">
+                            <button @click="triggerContinueUpload" class="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all shadow-sm hover:shadow-md whitespace-nowrap">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                继续上传
+                            </button>
+                            <button @click="reset" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm whitespace-nowrap">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+                                    <line x1="16" y1="5" x2="22" y2="5"></line>
+                                    <line x1="19" y1="2" x2="19" y2="8"></line>
+                                </svg>
+                                清空重传
+                            </button>
+                        </div>
+
+                        <!-- Divider (Hidden on mobile) -->
+                        <div class="hidden sm:block w-px h-6 bg-gray-300/50 mx-1"></div>
+
+                        <!-- Export Controls -->
+                        <div class="flex items-center gap-2">
+                            <button @click="exportExcel" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-green-50 hover:text-green-700 hover:border-green-200 transition-all shadow-sm whitespace-nowrap">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="8" y1="13" x2="16" y2="13"></line>
+                                    <line x1="8" y1="17" x2="16" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                导出 Excel
+                            </button>
+                            <button @click="exportPDF" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-all shadow-sm whitespace-nowrap">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                导出 PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -231,6 +336,7 @@
                                         </div>
                                     </th>
                                     <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">状态</th>
+                                    <th class="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">操作</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100/50">
@@ -247,9 +353,17 @@
                                             {{ file.status }}
                                         </span>
                                     </td>
+                                    <td class="p-4 text-center">
+                                        <button @click="removeFile(file)" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50" title="删除">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
+                                    </td>
                                 </tr>
                                 <tr v-if="filteredResults.length === 0">
-                                    <td colspan="4" class="p-8 text-center text-gray-400 text-sm">
+                                    <td colspan="5" class="p-8 text-center text-gray-400 text-sm">
                                         没有找到符合条件的文件
                                     </td>
                                 </tr>
@@ -258,6 +372,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Hidden Inputs (Moved here to ensure they are always present) -->
+            <input type="file" ref="fileInput" multiple hidden @change="handleFileSelect">
+            <input type="file" ref="folderInput" webkitdirectory multiple hidden @change="handleFileSelect">
+            <input type="file" ref="continueFileInput" multiple hidden @change="handleContinueFileSelect">
 
         </div>
     </div>

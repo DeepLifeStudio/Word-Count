@@ -5,11 +5,13 @@ createApp({
         const results = ref([]);
         const loading = ref(false);
         const error = ref(null);
+        const docWarning = ref(null);
         const isDragging = ref(false);
         const currentFilter = ref('all');
         const sortOrder = ref(null); // null -> 'desc' -> 'asc'
         const fileInput = ref(null);
         const folderInput = ref(null);
+        const continueFileInput = ref(null);
         const uploadProgress = ref({
             current: 0,
             total: 0,
@@ -73,11 +75,17 @@ createApp({
             folderInput.value.click();
         };
 
+        const triggerContinueUpload = () => {
+            continueFileInput.value.click();
+        };
+
         // 异步过滤文件 - 分批处理避免阻塞UI
+        // 同时检测是否有 .doc 文件并收集文件名
         const filterFilesAsync = async (fileList) => {
             const supportedExtensions = new Set(['.docx', '.pdf', '.txt', '.md']);
             const allFiles = Array.isArray(fileList) ? fileList : Array.from(fileList);
             const validFiles = [];
+            const docFiles = [];  // 收集 .doc 文件名
 
             const totalFiles = allFiles.length;
             const chunks = Math.ceil(totalFiles / FILTER_CHUNK_SIZE);
@@ -96,6 +104,11 @@ createApp({
                     const fileName = file.name.toLowerCase();
                     const ext = '.' + fileName.split('.').pop();
 
+                    // 收集 .doc 文件名
+                    if (ext === '.doc') {
+                        docFiles.push(file.name);
+                    }
+
                     if (supportedExtensions.has(ext) && !file.name.startsWith('~$')) {
                         validFiles.push(file);
                     }
@@ -108,7 +121,7 @@ createApp({
             }
 
             uploadProgress.value.preprocessing = false;
-            return validFiles;
+            return { validFiles, docFiles };
         };
 
         const handleFileSelect = async (event) => {
@@ -122,11 +135,37 @@ createApp({
             await new Promise(resolve => setTimeout(resolve, 0));
 
             // 异步过滤文件
-            const validFiles = await filterFilesAsync(files);
+            const { validFiles, docFiles } = await filterFilesAsync(files);
+
+            // 如果检测到 .doc 文件,显示友好提示
+            if (docFiles.length > 0) {
+                showDocWarning(docFiles);
+                loading.value = false;
+                return;
+            }
 
             await uploadFiles(validFiles);
 
             // Reset inputs to allow selecting the same file again
+            event.target.value = '';
+        };
+
+        const handleContinueFileSelect = async (event) => {
+            const files = event.target.files;
+            loading.value = true;
+            error.value = null;
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            const { validFiles, docFiles } = await filterFilesAsync(files);
+
+            if (docFiles.length > 0) {
+                showDocWarning(docFiles);
+                loading.value = false;
+                return;
+            }
+
+            await uploadFiles(validFiles, true); // append = true
+
             event.target.value = '';
         };
 
@@ -157,11 +196,27 @@ createApp({
                 await Promise.all(promises);
 
                 // 异步过滤文件
-                const validFiles = await filterFilesAsync(files);
+                const { validFiles, docFiles } = await filterFilesAsync(files);
+
+                // 如果检测到 .doc 文件,显示友好提示
+                if (docFiles.length > 0) {
+                    showDocWarning(docFiles);
+                    loading.value = false;
+                    return;
+                }
+
                 await uploadFiles(validFiles);
             } else {
                 // 异步过滤文件
-                const validFiles = await filterFilesAsync(event.dataTransfer.files);
+                const { validFiles, docFiles } = await filterFilesAsync(event.dataTransfer.files);
+
+                // 如果检测到 .doc 文件,显示友好提示
+                if (docFiles.length > 0) {
+                    showDocWarning(docFiles);
+                    loading.value = false;
+                    return;
+                }
+
                 await uploadFiles(validFiles);
             }
         };
@@ -190,7 +245,7 @@ createApp({
             }
         };
 
-        const uploadFiles = async (validFiles) => {
+        const uploadFiles = async (validFiles, append = false) => {
             if (!validFiles || validFiles.length === 0) {
                 error.value = '请选择包含支持格式 (.docx, .pdf, .txt, .md) 的文件';
                 loading.value = false;
@@ -198,7 +253,9 @@ createApp({
             }
 
             // loading已经在handleFileSelect/handleDrop中设置
-            results.value = []; // 清空之前的结果
+            if (!append) {
+                results.value = []; // 清空之前的结果
+            }
 
             try {
                 // 计算批次数量
@@ -320,10 +377,27 @@ createApp({
             }
         };
 
+        // 显示 .doc 文件警告
+        const showDocWarning = (docFiles) => {
+            docWarning.value = {
+                files: docFiles,
+                count: docFiles.length
+            };
+        };
+
+        const closeDocWarning = () => {
+            docWarning.value = null;
+        };
+
         const reset = () => {
             results.value = [];
             error.value = null;
+            docWarning.value = null;
             currentFilter.value = 'all';
+        };
+
+        const removeFile = (fileToRemove) => {
+            results.value = results.value.filter(file => file !== fileToRemove);
         };
 
         const getFileTypeClass = (type) => {
@@ -340,6 +414,8 @@ createApp({
             results,
             loading,
             error,
+            docWarning,
+            closeDocWarning,
             isDragging,
             currentFilter,
             sortOrder,
@@ -357,7 +433,11 @@ createApp({
             exportPDF,
             reset,
             getFileTypeClass,
-            uploadProgress
+            uploadProgress,
+            continueFileInput,
+            triggerContinueUpload,
+            handleContinueFileSelect,
+            removeFile
         };
     }
 }).mount('#app');

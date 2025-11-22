@@ -1,3 +1,0 @@
-This is a PDF test file.
-这是PDF测试文件。
-用于验证PDF支持。
